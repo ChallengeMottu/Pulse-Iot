@@ -30,6 +30,45 @@ de valores detectados em gráficos, representando um Dashboard de visualização
 
 Canal do ThingSpeak: https://thingspeak.mathworks.com/channels/2981128
 
+---
+
+## ✅ Conferência dos Dados
+
+### 🔹 Sensor MQ-135 (Simulado com Potenciômetro)
+
+- **0 a 500:** nível baixo de concentração (ambiente normal);
+- **500 a 2000:** nível médio de concentração (atenção!);
+- **Acima de 2000 ou 3000:** nível muito alto (situação de perigo).
+
+**Ação no código:**  
+- Acima de **500**, o sistema já dispara um alerta com buzzer e LED vermelho.
+
+---
+
+### 🔹 Sensor DHT22 (Temperatura e Umidade)
+
+**Temperatura:**
+- **Abaixo de 30°C:** situação considerada normal;
+- **Igual ou acima de 30°C:** estado de alerta para risco de incêndio.
+
+**Ação no código:**  
+- Se a temperatura for **igual ou maior que 30°C**, o sistema aciona o **LED vermelho** e o **buzzer** para alerta.
+- Caso contrário, mantém o **LED verde** ativo, indicando normalidade.
+
+
+---
+
+### 🔹 Sensor PIR (Sensor de Movimento)
+
+- **LOW (0):** nenhuma movimentação detectada;
+- **HIGH (1):** movimento detectado (presença de pessoas, animais ou outro fator).
+
+**Ação no código:**  
+- Quando um movimento é detectado, o sistema emite um alerta sonoro com o **buzzer** a **2000 Hz por 300 ms**.
+- A movimentação também é registrada e enviada para o **ThingSpeak** para fins de monitoramento.
+
+---
+
 
 ## 📌 Considerações Finais
 
@@ -47,6 +86,7 @@ como o ThingSpeak, e flexibilidade para integrar outros sensores ou sistemas fut
 Dessa forma, o FireAway pode funcionar como uma ferramenta de monitoramento remoto e em tempo real, potencializando ações rápidas de prevenção e combate 
 a incêndios, reduzindo danos ambientais e prejuízos sociais.
 
+---
 
 ## 👥 Grupo Desenvolvedor
 - Gabriela de Sousa Reis - RM558830
