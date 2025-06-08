@@ -7,7 +7,7 @@ de condições que propiciam queimadas em regiões florestais.
 
 Os sensores que fazem parte desse circuito, são: 
 - DHT22: sensor de detecção de temperatura e umidade do ambiente;
-- MQ-135 - dispositivo que permite identificação de gases tóxicos, como dióxido de carbono, amônia, fumaça e benzeno;
+- MQT-135 - dispositivo que permite identificação de gases tóxicos, como dióxido de carbono, amônia, fumaça e benzeno;
 - PIR - sensor de detecção de movimento através da radiação infravermelha.
 
 Quando detecta animais próximos a áreas de risco (uso do sensor PIR), o sistema ativa alertas visuais e sonoros (LEDs e buzzer) para afastá-los, reduzindo a mortalidade causada por queimadas. Essa estratégia é baseada em evidências científicas que comprovam a eficácia de estímulos luminosos e acústicos na dissuasão de animais selvagens.
@@ -22,9 +22,9 @@ processar os dados e integrar com outros sistemas.
 A estruturação e conexão entre os dispositivos foi simulada no **Wokwi**.
 ![image](https://github.com/user-attachments/assets/f81dad67-47bb-4258-8323-b76a10854dc7)
 
-O sensores DHT22 e PIR estão disponíveis no Wokwi, porém o sensor MQ-135 foi representado por potenciomêtros.
+O sensores DHT22 e PIR estão disponíveis no Wokwi, porém o sensor MQT-135 foi representado por potenciomêtros.
 O potenciômetro gera um sinal analógico variável conforme você gira o eixo. Assim, ele simula perfeitamente a variação 
-de leitura que o sensor MQ-135 teria na prática.
+de leitura que o sensor MQT-135 teria na prática.
 
 ## 💻 Estruturação do código
 
@@ -38,7 +38,7 @@ Canal do ThingSpeak: https://thingspeak.mathworks.com/channels/2981128
 
 ## ✅ Conferência dos Dados
 
-### 🔹 Sensor MQ-135 (Simulado com Potenciômetro)
+### 🔹 Sensor MQT-135 (Simulado com Potenciômetro)
 
 - **0 a 500:** nível baixo de concentração (ambiente normal);
 - **500 a 2000:** nível médio de concentração (atenção!);
@@ -97,10 +97,10 @@ const char* server = "http://api.thingspeak.com/update";
 
 ## 📌 Considerações Finais
 
-O uso integrado dos sensores DHT22, MQ-135 e PIR com um microcontrolador ESP32 demonstra uma solução eficiente e de baixo custo para a 
+O uso integrado dos sensores DHT22, MQT-135 e PIR com um microcontrolador ESP32 demonstra uma solução eficiente e de baixo custo para a 
 detecção e monitoramento de condições ambientais críticas que indicam risco de incêndios florestais.
 
-O sensor DHT22 oferece informações essenciais sobre temperatura e umidade, que são fatores chave para a propagação do fogo. O MQ-135 permite a 
+O sensor DHT22 oferece informações essenciais sobre temperatura e umidade, que são fatores chave para a propagação do fogo. O MQT-135 permite a 
 detecção de gases tóxicos e fumaça, possibilitando identificar situações que fogem do normal e podem indicar focos de incêndio. 
 Já o sensor PIR contribui para a detecção de movimentos, podendo auxiliar na identificação de presenças humanas ou animais que possam estar relacionados 
 a causas ou riscos de incêndio.
