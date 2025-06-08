@@ -10,6 +10,10 @@ Os sensores que fazem parte desse circuito, são:
 - MQ-135 - dispositivo que permite identificação de gases tóxicos, como dióxido de carbono, amônia, fumaça e benzeno;
 - PIR - sensor de detecção de movimento através da radiação infravermelha.
 
+Quando detecta animais próximos a áreas de risco (uso do sensor PIR), o sistema ativa alertas visuais e sonoros (LEDs e buzzer) para afastá-los, reduzindo a mortalidade causada por queimadas. Essa estratégia é baseada em evidências científicas que comprovam a eficácia de estímulos luminosos e acústicos na dissuasão de animais selvagens.
+
+Um exemplo destacado é o projeto Lion Lights, que usa luzes LED intermitentes para proteger o gado de ataques de leões no Quênia (Turere, 2017; WIPO Magazine, 2023). Além disso, práticas consolidadas de manejo de fauna utilizam estímulos aversivos — luzes, sons ou cheiros — para afastar animais de zonas críticas, especialmente próximas a áreas urbanas e infraestruturas (Dolbeer et al., 2009).
+
 
 ## 🛠️ Simulação do circuito
 
