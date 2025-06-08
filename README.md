@@ -69,6 +69,27 @@ Canal do ThingSpeak: https://thingspeak.mathworks.com/channels/2981128
 
 ---
 
+## 🚀  Instruções de uso
+Para conseguir testar a aplicação, é necessário ter a instalação da extensão PlatformIO e Wokwi Simulator no Vscode.
+
+### 1 Build e upload do projeto
+No VSCode com PlatformIO, o processo é:
+- PlatformIO: Build
+- PlatformIO: Upload (no Wokwi, o upload é feito automaticamente na simulação)
+
+Para envio de dados no ThingSpeak, deve haver a configuração da rede padrão do Wokwi:
+```bash
+const char* ssid = "Wokwi-GUEST";
+const char* password = "";
+```
+
+E conexão com um canal existente no ThingSpeak, com **Fields** de **Umidade**, **Temperatura**, **Movimento** e **Nível de Fumaça**:
+```bash
+String apiKey = "{apiKey_thingspeak}";
+const char* server = "http://api.thingspeak.com/update";
+```
+
+
 
 ## 📌 Considerações Finais
 
