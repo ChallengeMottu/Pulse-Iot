@@ -3,17 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Sistema de Rastreamento</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+    <title>Dashboard Rastreamento Mottu - Com Persistência</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.1.0/paho-mqtt.min.js"></script>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Arial', sans-serif;
         }
 
         body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
@@ -28,26 +28,16 @@
             text-align: center;
             color: white;
             margin-bottom: 30px;
-            padding: 20px;
         }
 
         .header h1 {
             font-size: 2.5rem;
             margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
         }
 
         .header p {
             font-size: 1.1rem;
             opacity: 0.9;
-        }
-
-        .status-conexao {
-            background: rgba(255,255,255,0.2);
-            padding: 10px;
-            border-radius: 10px;
-            margin-top: 10px;
-            display: inline-block;
         }
 
         .dashboard {
@@ -57,285 +47,388 @@
             margin-bottom: 30px;
         }
 
-        .card {
+        .beacon-card {
             background: white;
             border-radius: 15px;
-            padding: 25px;
+            padding: 20px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
             transition: transform 0.3s ease;
         }
 
-        .card:hover {
+        .beacon-card:hover {
             transform: translateY(-5px);
         }
 
-        .moto-card {
-            border-left: 6px solid #4CAF50;
-        }
-
-        .moto-card.alerta {
-            border-left-color: #f44336;
-            animation: alert-pulse 2s infinite;
-        }
-
-        .moto-card.localizacao-errada {
-            border-left-color: #ff9800;
-        }
-
-        @keyframes alert-pulse {
-            0%, 100% { box-shadow: 0 10px 30px rgba(244,67,54,0.3); }
-            50% { box-shadow: 0 10px 40px rgba(244,67,54,0.6); }
-        }
-
-        .card h3 {
-            color: #333;
+        .beacon-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 15px;
-            font-size: 1.4rem;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .beacon-id {
+            font-weight: bold;
+            color: #333;
+            font-size: 1.2rem;
         }
 
         .status {
-            display: inline-block;
-            padding: 8px 16px;
+            padding: 5px 15px;
             border-radius: 20px;
-            font-weight: bold;
             font-size: 0.9rem;
-            margin-bottom: 15px;
+            font-weight: bold;
         }
 
-        .status-normal {
-            background: #e8f5e8;
-            color: #2e7d32;
+        .status.connected {
+            background: #d4edda;
+            color: #155724;
         }
 
-        .status-alerta {
-            background: #ffebee;
-            color: #c62828;
+        .status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
         }
 
-        .status-localizacao-errada {
-            background: #fff3e0;
-            color: #ef6c00;
+        .status.alarm {
+            background: #fff3cd;
+            color: #856404;
+            animation: pulse 1s infinite;
         }
 
-        .info-row {
+        .beacon-info {
+            margin-bottom: 20px;
+        }
+
+        .info-item {
             display: flex;
             justify-content: space-between;
-            margin: 10px 0;
+            margin-bottom: 8px;
             padding: 8px 0;
             border-bottom: 1px solid #f0f0f0;
         }
 
         .info-label {
-            font-weight: bold;
+            font-weight: 600;
             color: #666;
         }
 
         .info-value {
+            font-weight: bold;
             color: #333;
         }
 
-        .buzzer-ativo {
-            color: #f44336;
-            font-weight: bold;
-            animation: buzz 0.5s infinite;
-        }
-
-        @keyframes buzz {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
         .controls {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
+            display: flex;
             gap: 10px;
-            margin-top: 20px;
+            flex-wrap: wrap;
         }
 
-        button {
-            padding: 12px;
+        .btn {
+            padding: 10px 20px;
             border: none;
             border-radius: 8px;
             cursor: pointer;
             font-weight: bold;
             transition: all 0.3s ease;
+            flex: 1;
+            min-width: 120px;
         }
 
-        button:hover {
-            transform: scale(1.05);
-        }
-
-        .btn-localizar {
-            background: #2196F3;
+        .btn-alarm {
+            background: #dc3545;
             color: white;
         }
 
-        .btn-alarme {
-            background: #f44336;
+        .btn-alarm:hover {
+            background: #c82333;
+        }
+
+        .btn-silence {
+            background: #ffc107;
+            color: black;
+        }
+
+        .btn-silence:hover {
+            background: #e0a800;
+        }
+
+        .btn-locate {
+            background: #007bff;
             color: white;
         }
 
-        .btn-desativar {
-            background: #4CAF50;
-            color: white;
+        .btn-locate:hover {
+            background: #0056b3;
         }
 
-        .btn-teste {
-            background: #FF9800;
-            color: white;
+        .btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
         }
 
-        .historico {
+        /* Estilos para a seção de persistência */
+        .persistence-section {
             background: white;
             border-radius: 15px;
-            padding: 25px;
+            padding: 20px;
+            margin-top: 20px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
         }
 
-        .historico h2 {
-            color: #333;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background: white;
-            border-radius: 10px;
-            overflow: hidden;
-        }
-
-        th, td {
-            padding: 15px;
-            text-align: left;
-            border-bottom: 1px solid #f0f0f0;
-        }
-
-        th {
-            background: #f8f9fa;
-            font-weight: bold;
-            color: #333;
-        }
-
-        tr:hover {
-            background: #f5f5f5;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 40px;
-            color: #666;
-        }
-
-        .beacon-simulador {
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            margin-bottom: 20px;
-        }
-
-        .simulador-controls {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        .persistence-controls {
+            display: flex;
             gap: 10px;
-            margin-top: 15px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .btn-history { background: #17a2b8; color: white; }
+        .btn-export { background: #28a745; color: white; }
+        .btn-clear { background: #dc3545; color: white; }
+
+        .btn-history:hover { background: #138496; }
+        .btn-export:hover { background: #218838; }
+        .btn-clear:hover { background: #c82333; }
+
+        .history-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .history-stats div {
+            font-weight: bold;
+        }
+
+        .history-container {
+            height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            background: #f8f9fa;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+        }
+
+        .history-entry {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+            background: white;
+        }
+
+        .history-entry.alarm {
+            border-left-color: #dc3545;
+            background: #fff5f5;
+        }
+
+        .history-entry.system {
+            border-left-color: #28a745;
+            background: #f8fff9;
+        }
+
+        .history-entry.warning {
+            border-left-color: #ffc107;
+            background: #fffef0;
+        }
+
+        .history-time {
+            font-size: 0.75rem;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .history-event {
+            font-weight: bold;
+            margin-bottom: 3px;
+        }
+
+        .history-details {
+            color: #555;
+        }
+
+        .history-meta {
+            font-size: 0.7rem;
+            color: #888;
+            margin-top: 5px;
+        }
+
+        .log-section {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .log-section h2 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        #logContainer {
+            height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            background: #f8f9fa;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 5px;
+            border-radius: 4px;
+        }
+
+        .log-entry.info {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+        }
+
+        .log-entry.warning {
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+        }
+
+        .log-entry.error {
+            background: #ffebee;
+            border-left: 4px solid #f44336;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .signal-strength {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .signal-bar {
+            width: 4px;
+            background: #ddd;
+            border-radius: 2px;
+        }
+
+        .signal-bar.active {
+            background: #28a745;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🏍️ Sistema de Rastreamento IoT</h1>
-            <p>Monitoramento em tempo real de motos com beacon e buzzer</p>
-            <div class="status-conexao">
-                🔗 Status MQTT: <span id="status-mqtt">Conectando...</span>
+            <h1>🚗 Sistema de Rastreamento Mottu</h1>
+            <p>Monitoramento em tempo real com persistência de dados</p>
+        </div>
+
+        <div class="dashboard" id="beaconsContainer">
+            <!-- Beacons serão adicionados dinamicamente aqui -->
+        </div>
+
+        <!-- SEÇÃO DE PERSISTÊNCIA ADICIONADA AQUI -->
+        <div class="persistence-section">
+            <h2>💾 Persistência de Dados</h2>
+            
+            <div class="persistence-controls">
+                <button class="btn btn-history" onclick="dashboard.getHistory()">
+                    📋 Carregar Histórico
+                </button>
+                <button class="btn btn-export" onclick="dashboard.exportHistory()">
+                    📤 Exportar JSON
+                </button>
+                <button class="btn btn-clear" onclick="dashboard.clearLocalHistory()">
+                    🗑️ Limpar Local
+                </button>
+            </div>
+
+            <div class="history-stats">
+                <div>📊 Eventos no histórico: <span id="historyCount">0</span></div>
+                <div>💿 Dados salvos localmente: <span id="localStorageSize">0</span> KB</div>
+            </div>
+
+            <div class="history-section">
+                <h3>🕒 Histórico de Eventos</h3>
+                <div id="historyContainer" class="history-container"></div>
             </div>
         </div>
 
-        <!-- Simulador para testes -->
-        <div class="beacon-simulador">
-            <h3>🎮 Simulador de Beacon</h3>
-            <p>Use estes controles para simular diferentes cenários:</p>
-            <div class="simulador-controls">
-                <button class="btn-localizar" onclick="simularComando('BEACON_001', 'localizar')">📍 Localizar Beacon</button>
-                <button class="btn-alarme" onclick="simularComando('BEACON_001', 'ativar_beacon')">🚨 Ativar Alarme</button>
-                <button class="btn-desativar" onclick="simularComando('BEACON_001', 'desativar_beacon')">✅ Desativar Alarme</button>
-                <button class="btn-teste" onclick="simularComando('BEACON_001', 'testar_buzzer')">🔊 Testar Buzzer</button>
-            </div>
-        </div>
-
-        <div class="dashboard" id="dashboard">
-            <div class="loading">
-                <p>🔄 Aguardando conexão com os beacons...</p>
-                <p>Os dispositivos aparecerão aqui automaticamente quando conectarem</p>
-            </div>
-        </div>
-
-        <div class="historico">
-            <h2>📊 Histórico de Eventos</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Data/Hora</th>
-                        <th>Beacon</th>
-                        <th>Evento</th>
-                        <th>Status</th>
-                        <th>Buzzer</th>
-                    </tr>
-                </thead>
-                <tbody id="tabela-historico">
-                    <tr>
-                        <td colspan="5" style="text-align: center;">Nenhum evento registrado</td>
-                    </tr>
-                </tbody>
-            </table>
+        <div class="log-section">
+            <h2>📋 Log de Atividades</h2>
+            <div id="logContainer"></div>
         </div>
     </div>
 
     <script>
-        class DashboardSistema {
+        class BeaconDashboard {
             constructor() {
+                this.beacons = new Map();
                 this.client = null;
-                this.beacons = {};
-                this.historico = [];
+                this.isConnected = false;
+                this.history = [];
+                this.localStorageKey = 'beacon_history_data';
+                
+                this.config = {
+                    mqttBroker: 'broker.hivemq.com',
+                    mqttPort: 8083,
+                    topicBeacon: 'mottu/beacon/status',
+                    topicAlert: 'mottu/beacon/alert',
+                    topicHistory: 'mottu/beacon/history'
+                };
+                
                 this.init();
             }
 
             init() {
-                this.conectarMQTT();
-                this.carregarHistorico();
-                this.renderizarBeacons();
-                
-                // Simular alguns beacons para demonstração
-                setTimeout(() => this.simularBeacons(), 2000);
+                this.connectMQTT();
+                this.loadFromLocalStorage();
+                this.setupEventListeners();
+                this.addLog('Sistema inicializado com persistência JSON', 'info');
             }
 
-            conectarMQTT() {
-                this.client = new Paho.MQTT.Client("broker.emqx.io", 8084, "dashboard_" + Math.random().toString(36));
-                
+            connectMQTT() {
+                this.client = new Paho.MQTT.Client(
+                    this.config.mqttBroker,
+                    this.config.mqttPort,
+                    "dashboard_" + Math.random().toString(36).substr(2, 9)
+                );
+
                 this.client.onConnectionLost = (response) => {
-                    console.log("Conexão perdida:", response.errorMessage);
-                    this.atualizarStatusConexao('Desconectado', 'red');
+                    this.isConnected = false;
+                    this.addLog('Conexão MQTT perdida: ' + response.errorMessage, 'error');
+                    this.updateConnectionStatus();
                 };
 
                 this.client.onMessageArrived = (message) => {
-                    this.processarMensagem(message);
+                    this.handleMessage(message);
                 };
 
                 const options = {
                     onSuccess: () => {
-                        console.log("✅ Conectado ao broker MQTT");
-                        this.atualizarStatusConexao('Conectado', 'green');
-                        
-                        // Inscrever nos tópicos
-                        this.client.subscribe("beacon/+/status");
-                        this.client.subscribe("beacon/+/eventos");
+                        this.isConnected = true;
+                        this.addLog('Conectado ao broker MQTT', 'info');
+                        this.client.subscribe(this.config.topicBeacon);
+                        this.client.subscribe(this.config.topicAlert);
+                        this.client.subscribe(this.config.topicHistory);
+                        this.updateConnectionStatus();
                     },
                     onFailure: (error) => {
-                        console.log("❌ Falha na conexão:", error);
-                        this.atualizarStatusConexao('Erro de conexão', 'red');
+                        this.addLog('Falha na conexão MQTT: ' + error.errorMessage, 'error');
+                        setTimeout(() => this.connectMQTT(), 5000);
                     },
                     useSSL: true
                 };
@@ -343,241 +436,357 @@
                 this.client.connect(options);
             }
 
-            atualizarStatusConexao(status, cor) {
-                const elemento = document.getElementById('status-mqtt');
-                elemento.textContent = status;
-                elemento.style.color = cor;
-            }
-
-            processarMensagem(message) {
+            handleMessage(message) {
                 try {
-                    const dados = JSON.parse(message.payloadString);
-                    const beaconId = message.destinationName.split('/')[1];
+                    const data = JSON.parse(message.payloadString);
                     
-                    console.log("📨 Mensagem recebida:", beaconId, dados);
-
-                    if (!this.beacons[beaconId]) {
-                        this.beacons[beaconId] = {
-                            id: beaconId,
-                            nome: `Beacon ${beaconId}`,
-                            status: 'normal',
-                            buzzer: false,
-                            ultimaAtualizacao: new Date()
-                        };
+                    if (message.destinationName === this.config.topicBeacon) {
+                        this.updateBeacon(data);
+                    } else if (message.destinationName === this.config.topicAlert) {
+                        this.addLog(`Alerta: Beacon ${data.beacon_id} - ${data.alarm_status}`, 'warning');
+                    } else if (message.destinationName === this.config.topicHistory) {
+                        this.updateHistory(data);
                     }
-
-                    if (message.destinationName.includes('status')) {
-                        this.beacons[beaconId].status = dados.ativo ? 'alerta' : 'normal';
-                        this.beacons[beaconId].buzzer = dados.buzzer_ligado;
-                    }
-
-                    this.beacons[beaconId].ultimaAtualizacao = new Date();
-                    
-                    // Adicionar ao histórico
-                    this.adicionarHistorico(beaconId, dados);
-                    
-                    this.renderizarBeacons();
-                    
                 } catch (error) {
-                    console.error("Erro ao processar mensagem:", error);
+                    this.addLog('Erro ao processar mensagem: ' + error, 'error');
                 }
             }
 
-            adicionarHistorico(beaconId, dados) {
-                const evento = {
-                    id: Date.now(),
-                    dataHora: new Date().toLocaleString('pt-BR'),
-                    beacon: beaconId,
-                    evento: dados.evento || 'atualizacao_status',
-                    status: this.beacons[beaconId]?.status || 'desconhecido',
-                    buzzer: this.beacons[beaconId]?.buzzer ? 'Ativo' : 'Inativo'
-                };
-
-                this.historico.unshift(evento);
+            updateBeacon(data) {
+                const beaconId = data.beacon_id;
                 
-                // Manter apenas os últimos 20 registros
-                if (this.historico.length > 20) {
-                    this.historico = this.historico.slice(0, 20);
+                if (!this.beacons.has(beaconId)) {
+                    this.createBeaconCard(data);
                 }
+                
+                const beaconElement = document.getElementById(`beacon-${beaconId}`);
+                if (beaconElement) {
+                    this.updateBeaconUI(beaconElement, data);
+                }
+                
+                this.beacons.set(beaconId, {
+                    ...data,
+                    lastUpdate: Date.now()
+                });
 
-                this.salvarHistorico();
-                this.renderizarHistorico();
+                this.saveToLocalStorage(data);
             }
 
-            renderizarBeacons() {
-                const dashboard = document.getElementById('dashboard');
-                const beaconsArray = Object.values(this.beacons);
-
-                if (beaconsArray.length === 0) {
-                    dashboard.innerHTML = `
-                        <div class="loading">
-                            <p>🔄 Aguardando conexão com os beacons...</p>
-                            <p>Os dispositivos aparecerão aqui automaticamente quando conectarem</p>
+            createBeaconCard(data) {
+                const container = document.getElementById('beaconsContainer');
+                
+                const card = document.createElement('div');
+                card.className = 'beacon-card';
+                card.id = `beacon-${data.beacon_id}`;
+                
+                card.innerHTML = `
+                    <div class="beacon-header">
+                        <div class="beacon-id">${data.beacon_id}</div>
+                        <div class="status connected" id="status-${data.beacon_id}">Conectado</div>
+                    </div>
+                    <div class="beacon-info">
+                        <div class="info-item">
+                            <span class="info-label">Alarme:</span>
+                            <span class="info-value" id="alarm-${data.beacon_id}">Inativo</span>
                         </div>
-                    `;
-                    return;
-                }
-
-                dashboard.innerHTML = beaconsArray.map(beacon => `
-                    <div class="card moto-card ${beacon.status !== 'normal' ? beacon.status : ''}">
-                        <h3>${beacon.nome}</h3>
-                        <div class="status status-${beacon.status}">
-                            ${beacon.status === 'normal' ? '✅ NORMAL' : 
-                              beacon.status === 'alerta' ? '🚨 EM ALERTA' : '📍 LOCALIZAÇÃO ERRADA'}
-                        </div>
-                        
-                        <div class="info-row">
-                            <span class="info-label">ID:</span>
-                            <span class="info-value">${beacon.id}</span>
-                        </div>
-                        
-                        <div class="info-row">
-                            <span class="info-label">Buzzer:</span>
-                            <span class="info-value ${beacon.buzzer ? 'buzzer-ativo' : ''}">
-                                ${beacon.buzzer ? '🔊 ATIVO - ALARME TOCANDO' : '🔇 Inativo'}
+                        <div class="info-item">
+                            <span class="info-label">Sinal WiFi:</span>
+                            <span class="info-value" id="rssi-${data.beacon_id}">
+                                <div class="signal-strength" id="signal-${data.beacon_id}"></div>
                             </span>
                         </div>
-                        
-                        <div class="info-row">
-                            <span class="info-label">Última atualização:</span>
-                            <span class="info-value">${beacon.ultimaAtualizacao.toLocaleTimeString('pt-BR')}</span>
+                        <div class="info-item">
+                            <span class="info-label">Bateria:</span>
+                            <span class="info-value" id="battery-${data.beacon_id}">${data.battery || 'N/A'}%</span>
                         </div>
-
-                        <div class="controls">
-                            <button class="btn-localizar" onclick="dashboard.enviarComando('${beacon.id}', 'localizar')">
-                                📍 Localizar
-                            </button>
-                            <button class="btn-alarme" onclick="dashboard.enviarComando('${beacon.id}', 'ativar_beacon')">
-                                🚨 Ativar Alarme
-                            </button>
-                            <button class="btn-desativar" onclick="dashboard.enviarComando('${beacon.id}', 'desativar_beacon')">
-                                ✅ Desativar
-                            </button>
-                            <button class="btn-teste" onclick="dashboard.enviarComando('${beacon.id}', 'testar_buzzer')">
-                                🔊 Testar
-                            </button>
+                        <div class="info-item">
+                            <span class="info-label">Histórico:</span>
+                            <span class="info-value" id="history-${data.beacon_id}">${data.history_count || 0} eventos</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Última atualização:</span>
+                            <span class="info-value" id="time-${data.beacon_id}">Agora</span>
                         </div>
                     </div>
-                `).join('');
+                    <div class="controls">
+                        <button class="btn btn-alarm" onclick="dashboard.activateAlarm('${data.beacon_id}')">
+                            🔔 Ativar Alarme
+                        </button>
+                        <button class="btn btn-silence" onclick="dashboard.deactivateAlarm('${data.beacon_id}')">
+                            🔇 Silenciar
+                        </button>
+                        <button class="btn btn-locate" onclick="dashboard.locateBeacon('${data.beacon_id}')">
+                            📍 Localizar
+                        </button>
+                    </div>
+                `;
+                
+                container.appendChild(card);
+                this.addLog(`Novo beacon detectado: ${data.beacon_id}`, 'info');
             }
 
-            renderizarHistorico() {
-                const tbody = document.getElementById('tabela-historico');
+            updateBeaconUI(element, data) {
+                // Atualizar status do alarme
+                const alarmElement = element.querySelector(`#alarm-${data.beacon_id}`);
+                const statusElement = element.querySelector(`#status-${data.beacon_id}`);
+                const historyElement = element.querySelector(`#history-${data.beacon_id}`);
                 
-                if (this.historico.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Nenhum evento registrado</td></tr>';
+                if (data.alarm_active) {
+                    alarmElement.textContent = 'ATIVO';
+                    alarmElement.style.color = '#dc3545';
+                    statusElement.className = 'status alarm';
+                    statusElement.textContent = 'ALARME ATIVO';
+                } else {
+                    alarmElement.textContent = 'Inativo';
+                    alarmElement.style.color = '#28a745';
+                    statusElement.className = 'status connected';
+                    statusElement.textContent = 'Conectado';
+                }
+
+                if (historyElement && data.history_count !== undefined) {
+                    historyElement.textContent = data.history_count + ' eventos';
+                }
+
+                // Atualizar força do sinal
+                this.updateSignalStrength(data.beacon_id, data.rssi);
+
+                // Atualizar bateria
+                const batteryElement = element.querySelector(`#battery-${data.beacon_id}`);
+                if (data.battery) {
+                    batteryElement.textContent = `${data.battery}%`;
+                    batteryElement.style.color = data.battery > 20 ? '#28a745' : '#dc3545';
+                }
+
+                // Atualizar timestamp
+                const timeElement = element.querySelector(`#time-${data.beacon_id}`);
+                timeElement.textContent = new Date().toLocaleTimeString();
+            }
+
+            updateSignalStrength(beaconId, rssi) {
+                const signalElement = document.getElementById(`signal-${beaconId}`);
+                if (!signalElement || rssi === undefined) return;
+
+                const bars = 4;
+                let html = '';
+                const strength = Math.min(Math.max(Math.abs(rssi), 30), 90);
+                const activeBars = Math.ceil(((90 - strength) / 60) * bars);
+
+                for (let i = 0; i < bars; i++) {
+                    const height = 5 + (i * 3);
+                    const isActive = i < activeBars;
+                    html += `<div class="signal-bar ${isActive ? 'active' : ''}" 
+                             style="height: ${height}px"></div>`;
+                }
+
+                signalElement.innerHTML = html + ` <span>${rssi} dBm</span>`;
+            }
+
+            // FUNÇÕES DE PERSISTÊNCIA
+            getHistory() {
+                this.sendCommand('beacon_device_001', 'get_history');
+                this.addLog('Solicitando histórico do beacon...', 'info');
+            }
+
+            updateHistory(data) {
+                try {
+                    const historyData = JSON.parse(data.history_data);
+                    this.history = historyData;
+                    this.displayHistory();
+                    this.saveToLocalStorage();
+                    this.updateHistoryStats();
+                    this.addLog(`Histórico atualizado: ${this.history.length} eventos`, 'info');
+                } catch (error) {
+                    this.addLog('Erro ao processar histórico: ' + error, 'error');
+                }
+            }
+
+            displayHistory() {
+                const container = document.getElementById('historyContainer');
+                if (!container) return;
+
+                container.innerHTML = '';
+
+                // Mostra os mais recentes primeiro
+                this.history.slice().reverse().forEach(entry => {
+                    const entryElement = document.createElement('div');
+                    entryElement.className = `history-entry ${this.getHistoryEntryClass(entry.event_type)}`;
+                    
+                    const time = new Date(entry.timestamp).toLocaleString();
+                    entryElement.innerHTML = `
+                        <div class="history-time">${time}</div>
+                        <div class="history-event">${this.getEventTypeText(entry.event_type)}</div>
+                        <div class="history-details">${entry.details || ''}</div>
+                        <div class="history-meta">Sinal: ${entry.rssi}dBm | Bateria: ${entry.battery}%</div>
+                    `;
+                    
+                    container.appendChild(entryElement);
+                });
+            }
+
+            getHistoryEntryClass(eventType) {
+                const classMap = {
+                    'alarm_activated': 'alarm',
+                    'alarm_deactivated': 'alarm',
+                    'system_start': 'system',
+                    'wifi_connected': 'system',
+                    'mqtt_connected': 'system',
+                    'status_update': 'warning'
+                };
+                return classMap[eventType] || '';
+            }
+
+            getEventTypeText(eventType) {
+                const textMap = {
+                    'alarm_activated': '🚨 ALARME ATIVADO',
+                    'alarm_deactivated': '🔇 ALARME DESATIVADO',
+                    'system_start': '⚡ SISTEMA INICIADO',
+                    'wifi_connected': '📡 WIFI CONECTADO',
+                    'mqtt_connected': '📶 MQTT CONECTADO',
+                    'status_update': '📊 STATUS ATUALIZADO'
+                };
+                return textMap[eventType] || eventType;
+            }
+
+            saveToLocalStorage() {
+                const dataToSave = {
+                    history: this.history,
+                    lastUpdate: new Date().toISOString(),
+                    totalEntries: this.history.length
+                };
+                
+                localStorage.setItem(this.localStorageKey, JSON.stringify(dataToSave));
+                this.updateHistoryStats();
+            }
+
+            loadFromLocalStorage() {
+                try {
+                    const saved = localStorage.getItem(this.localStorageKey);
+                    if (saved) {
+                        const data = JSON.parse(saved);
+                        this.history = data.history || [];
+                        this.displayHistory();
+                        this.updateHistoryStats();
+                        this.addLog(`Histórico carregado: ${this.history.length} eventos`, 'info');
+                    }
+                } catch (error) {
+                    this.addLog('Erro ao carregar histórico local', 'error');
+                }
+            }
+
+            updateHistoryStats() {
+                const countElement = document.getElementById('historyCount');
+                const sizeElement = document.getElementById('localStorageSize');
+                
+                if (countElement) {
+                    countElement.textContent = this.history.length;
+                }
+                
+                if (sizeElement) {
+                    const dataSize = JSON.stringify(this.history).length / 1024;
+                    sizeElement.textContent = dataSize.toFixed(2);
+                }
+            }
+
+            exportHistory() {
+                const dataStr = JSON.stringify(this.history, null, 2);
+                const dataBlob = new Blob([dataStr], {type: 'application/json'});
+                
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(dataBlob);
+                link.download = `beacon_history_${new Date().toISOString().split('T')[0]}.json`;
+                link.click();
+                
+                this.addLog('Histórico exportado como JSON', 'info');
+            }
+
+            clearLocalHistory() {
+                localStorage.removeItem(this.localStorageKey);
+                this.history = [];
+                this.displayHistory();
+                this.updateHistoryStats();
+                this.addLog('Histórico local limpo', 'info');
+            }
+
+            activateAlarm(beaconId) {
+                this.sendCommand(beaconId, 'activate_alarm');
+                this.addLog(`Alarme ativado para beacon: ${beaconId}`, 'warning');
+            }
+
+            deactivateAlarm(beaconId) {
+                this.sendCommand(beaconId, 'deactivate_alarm');
+                this.addLog(`Alarme desativado para beacon: ${beaconId}`, 'info');
+            }
+
+            locateBeacon(beaconId) {
+                this.sendCommand(beaconId, 'activate_alarm');
+                this.addLog(`Comando de localização enviado para: ${beaconId}`, 'info');
+            }
+
+            sendCommand(beaconId, command) {
+                if (!this.isConnected) {
+                    this.addLog('Erro: Não conectado ao MQTT', 'error');
                     return;
                 }
 
-                tbody.innerHTML = this.historico.map(evento => `
-                    <tr>
-                        <td>${evento.dataHora}</td>
-                        <td>${evento.beacon}</td>
-                        <td>${this.formatarEvento(evento.evento)}</td>
-                        <td><span class="status status-${evento.status}">${evento.status.toUpperCase()}</span></td>
-                        <td>${evento.buzzer}</td>
-                    </tr>
-                `).join('');
-            }
-
-            formatarEvento(evento) {
-                const eventos = {
-                    'beacon_ativado': '🚨 Beacon Ativado',
-                    'beacon_desativado': '✅ Beacon Desativado',
-                    'localizacao_solicitada': '📍 Localização Solicitada',
-                    'buzzer_testado': '🔊 Buzzer Testado',
-                    'atualizacao_status': '📊 Status Atualizado'
-                };
-                return eventos[evento] || evento;
-            }
-
-            enviarComando(beaconId, comando) {
-                const mensagem = {
-                    comando: comando,
+                const message = {
+                    beacon_id: beaconId,
+                    command: command,
                     timestamp: Date.now()
                 };
 
-                const topico = `beacon/${beaconId}/comando`;
-                const message = new Paho.MQTT.Message(JSON.stringify(mensagem));
-                message.destinationName = topico;
+                const mqttMessage = new Paho.MQTT.Message(JSON.stringify(message));
+                mqttMessage.destinationName = this.config.topicAlert;
+                this.client.send(mqttMessage);
+            }
+
+            addLog(message, type = 'info') {
+                const logContainer = document.getElementById('logContainer');
+                const logEntry = document.createElement('div');
+                logEntry.className = `log-entry ${type}`;
                 
-                if (this.client && this.client.isConnected()) {
-                    this.client.send(message);
-                    console.log(`Comando enviado para ${beaconId}:`, comando);
-                    
-                    // Feedback visual
-                    this.mostrarFeedback(`Comando "${comando}" enviado para ${beaconId}`);
-                } else {
-                    alert("Erro: Não conectado ao MQTT");
+                const timestamp = new Date().toLocaleTimeString();
+                logEntry.innerHTML = `<strong>[${timestamp}]</strong> ${message}`;
+                
+                logContainer.appendChild(logEntry);
+                logContainer.scrollTop = logContainer.scrollHeight;
+
+                // Manter apenas os últimos 50 logs
+                const logs = logContainer.getElementsByClassName('log-entry');
+                if (logs.length > 50) {
+                    logs[0].remove();
                 }
             }
 
-            mostrarFeedback(mensagem) {
-                // Criar um toast notification
-                const toast = document.createElement('div');
-                toast.style.cssText = `
-                    position: fixed;
-                    top: 20px;
-                    right: 20px;
-                    background: #4CAF50;
-                    color: white;
-                    padding: 15px 20px;
-                    border-radius: 5px;
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-                    z-index: 1000;
-                    animation: slideIn 0.3s ease;
-                `;
-                toast.textContent = mensagem;
-                document.body.appendChild(toast);
-
-                setTimeout(() => {
-                    toast.remove();
-                }, 3000);
+            updateConnectionStatus() {
+                const status = this.isConnected ? 'Conectado' : 'Desconectado';
+                this.addLog(`Status MQTT: ${status}`, this.isConnected ? 'info' : 'error');
             }
 
-            simularBeacons() {
-                // Simular dados iniciais para demonstração
-                this.beacons['BEACON_001'] = {
-                    id: 'BEACON_001',
-                    nome: 'Beacon Principal',
-                    status: 'normal',
-                    buzzer: false,
-                    ultimaAtualizacao: new Date()
-                };
-
-                this.renderizarBeacons();
-            }
-
-            salvarHistorico() {
-                localStorage.setItem('historico-beacons', JSON.stringify(this.historico));
-            }
-
-            carregarHistorico() {
-                const historicoSalvo = localStorage.getItem('historico-beacons');
-                if (historicoSalvo) {
-                    this.historico = JSON.parse(historicoSalvo);
-                    this.renderizarHistorico();
+            setupEventListeners() {
+                // Solicitar permissão para notificações
+                if ('Notification' in window && Notification.permission === 'default') {
+                    Notification.requestPermission();
                 }
+
+                // Reconectar quando online
+                window.addEventListener('online', () => {
+                    this.addLog('Conexão de internet restaurada', 'info');
+                    if (!this.isConnected) {
+                        this.connectMQTT();
+                    }
+                });
+
+                window.addEventListener('offline', () => {
+                    this.addLog('Conexão de internet perdida', 'error');
+                });
             }
         }
 
-        // Inicializar dashboard
-        const dashboard = new DashboardSistema();
-
-        // Função global para o simulador
-        function simularComando(beaconId, comando) {
-            dashboard.enviarComando(beaconId, comando);
-        }
-
-        // Adicionar CSS para animação do toast
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes slideIn {
-                from { transform: translateX(100%); opacity: 0; }
-                to { transform: translateX(0); opacity: 1; }
-            }
-        `;
-        document.head.appendChild(style);
+        // Inicializar dashboard quando a página carregar
+        let dashboard;
+        window.addEventListener('DOMContentLoaded', () => {
+            dashboard = new BeaconDashboard();
+        });
     </script>
 </body>
 </html>

@@ -1,3 +1,22 @@
 [wokwi]
 version = 1
-firmware = "src/main.cpp"
+firmware = "beacon.ino"
+
+[[parts]]
+name = "esp32"
+type = "wokwi-esp32-devkit-c-v4"
+
+[[parts]]
+name = "buzzer"
+type = "wokwi-buzzer"
+
+[parts.options]
+volume = "0.1"
+
+[[connections]]
+from = "esp32:5"
+to = "buzzer:1"
+
+[[connections]]
+from = "buzzer:2" 
+to = "esp32:GND"
