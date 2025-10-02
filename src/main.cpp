@@ -1,13 +1,10 @@
-// beacon.ino
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
 
-// Configurações WiFi
+// Configurações
 const char* ssid = "Wokwi-GUEST";
 const char* password = "";
-
-// Configurações MQTT
 const char* mqtt_broker = "broker.hivemq.com";
 const char* mqtt_topic_beacon = "mottu/beacon/status";
 const char* mqtt_topic_alert = "mottu/beacon/alert";
@@ -17,57 +14,15 @@ const char* mqtt_client_id = "beacon_device_001";
 WiFiClient espClient;
 PubSubClient client(espClient);
 
-// Pinos
+// Variáveis globais
 const int buzzerPin = 5;
 bool alarmActive = false;
 unsigned long lastStatusUpdate = 0;
 const long statusInterval = 5000;
-
-// Sistema de persistência
-const int MAX_HISTORY_ENTRIES = 100;
-String historyData = "[]"; // Inicializa com array JSON vazio
+String historyData = "[]";
 int historyCount = 0;
 
-// Declarações das funções
-void setup_wifi();
-void mqtt_callback(char* topic, byte* payload, unsigned int length);
-void activateAlarm();
-void deactivateAlarm();
-void sendAlertStatus(String status);
-void sendBeaconStatus();
-void handleAlarm();
-void reconnect();
-void addToHistory(String eventType, String details);
-void saveHistoryToFile();
-void sendHistoryToDashboard();
-
-void setup() {
-  Serial.begin(115200);
-  
-  // Configurar pinos
-  pinMode(buzzerPin, OUTPUT);
-  digitalWrite(buzzerPin, LOW);
-  
-  setup_wifi();
-  client.setServer(mqtt_broker, 1883);
-  client.setCallback(mqtt_callback);
-  
-  // Inicializar histórico
-  initializeHistory();
-  
-  Serial.println("Beacon Mottu inicializado com persistência!");
-  Serial.println("Sistema de histórico JSON ativado");
-}
-
-void initializeHistory() {
-  // Simular carregamento de arquivo (em sistema real seria SPIFFS)
-  historyData = "[]";
-  historyCount = 0;
-  
-  // Adicionar evento inicial
-  addToHistory("system_start", "Beacon inicializado com persistência JSON");
-}
-
+// ========== FUNÇÃO DE HISTÓRICO ==========
 void addToHistory(String eventType, String details) {
   JsonDocument doc;
   deserializeJson(doc, historyData);
@@ -81,51 +36,14 @@ void addToHistory(String eventType, String details) {
   newEntry["rssi"] = WiFi.RSSI();
   newEntry["battery"] = random(80, 101);
   
-  // Serializar de volta para string
   historyData.clear();
   serializeJson(doc, historyData);
   historyCount++;
   
-  Serial.println("📝 Histórico atualizado: " + eventType);
-  
-  // Manter apenas últimas entradas (controle de memória)
-  if (historyCount > MAX_HISTORY_ENTRIES) {
-    trimHistory();
-  }
-  
-  // Salvar periodicamente (em sistema real seria em arquivo)
-  if (historyCount % 10 == 0) {
-    saveHistoryToFile();
-  }
+  Serial.println("📝 " + eventType + ": " + details);
 }
 
-void trimHistory() {
-  JsonDocument doc;
-  deserializeJson(doc, historyData);
-  
-  JsonArray arr = doc.as<JsonArray>();
-  if (arr.size() > MAX_HISTORY_ENTRIES) {
-    // Remove as entradas mais antigas
-    for (int i = 0; i < arr.size() - MAX_HISTORY_ENTRIES; i++) {
-      arr.remove(0);
-    }
-    historyData.clear();
-    serializeJson(doc, historyData);
-    historyCount = arr.size();
-    Serial.println("✂️  Histórico truncado para " + String(MAX_HISTORY_ENTRIES) + " entradas");
-  }
-}
-
-void saveHistoryToFile() {
-  // Em sistema real, salvaria em SPIFFS
-  // Aqui simulamos o salvamento
-  Serial.println("💾 Salvando histórico (simulado)...");
-  Serial.println("📊 Total de eventos: " + String(historyCount));
-  
-  // Enviar histórico para dashboard periodicamente
-  sendHistoryToDashboard();
-}
-
+// ========== FUNÇÃO DE HISTÓRICO PARA DASHBOARD ==========
 void sendHistoryToDashboard() {
   JsonDocument doc;
   doc["beacon_id"] = mqtt_client_id;
@@ -136,11 +54,12 @@ void sendHistoryToDashboard() {
   
   String jsonString;
   serializeJson(doc, jsonString);
-  
   client.publish(mqtt_topic_history, jsonString.c_str());
-  Serial.println("📤 Histórico enviado para dashboard");
+  
+  Serial.println("📤 Histórico enviado: " + String(historyCount) + " eventos");
 }
 
+// ========== SETUP WiFi ==========
 void setup_wifi() {
   delay(10);
   Serial.println();
@@ -156,24 +75,22 @@ void setup_wifi() {
 
   Serial.println("");
   Serial.println("WiFi conectado");
-  Serial.print("IP address: ");
+  Serial.print("IP: ");
   Serial.println(WiFi.localIP());
-  
-  addToHistory("wifi_connected", "Conectado ao WiFi: " + String(WiFi.localIP()));
 }
 
+// ========== CALLBACK MQTT ==========
 void mqtt_callback(char* topic, byte* payload, unsigned int length) {
   String message;
   for (int i = 0; i < length; i++) {
     message += (char)payload[i];
   }
   
-  Serial.print("Mensagem recebida: ");
+  Serial.print("Mensagem: ");
   Serial.print(topic);
   Serial.print(" - ");
   Serial.println(message);
   
-  // Processar comandos de alerta
   if (String(topic) == mqtt_topic_alert) {
     JsonDocument doc;
     deserializeJson(doc, message);
@@ -183,9 +100,16 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
     
     if (targetBeacon == mqtt_client_id) {
       if (command == "activate_alarm") {
-        activateAlarm();
+        alarmActive = true;
+        Serial.println("ALARME ATIVADO!");
+        addToHistory("alarm_activated", "Alarme ativado via dashboard");
+        
       } else if (command == "deactivate_alarm") {
-        deactivateAlarm();
+        alarmActive = false;
+        digitalWrite(buzzerPin, LOW);
+        Serial.println("Alarme desativado");
+        addToHistory("alarm_deactivated", "Alarme desativado via dashboard");
+        
       } else if (command == "get_history") {
         sendHistoryToDashboard();
       }
@@ -193,33 +117,7 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
   }
 }
 
-void activateAlarm() {
-  alarmActive = true;
-  Serial.println("ALARME ATIVADO! Buzzer tocando...");
-  addToHistory("alarm_activated", "Alarme ativado remotamente via dashboard");
-  sendAlertStatus("activated");
-}
-
-void deactivateAlarm() {
-  alarmActive = false;
-  digitalWrite(buzzerPin, LOW);
-  Serial.println("Alarme desativado");
-  addToHistory("alarm_deactivated", "Alarme desativado remotamente");
-  sendAlertStatus("deactivated");
-}
-
-void sendAlertStatus(String status) {
-  JsonDocument doc;
-  doc["beacon_id"] = mqtt_client_id;
-  doc["alarm_status"] = status;
-  doc["timestamp"] = millis();
-  
-  String jsonString;
-  serializeJson(doc, jsonString);
-  
-  client.publish(mqtt_topic_beacon, jsonString.c_str());
-}
-
+// ========== ENVIAR STATUS ==========
 void sendBeaconStatus() {
   JsonDocument doc;
   doc["beacon_id"] = mqtt_client_id;
@@ -231,13 +129,12 @@ void sendBeaconStatus() {
   
   String jsonString;
   serializeJson(doc, jsonString);
-  
   client.publish(mqtt_topic_beacon, jsonString.c_str());
   
-  // Adicionar ao histórico periodicamente
-  addToHistory("status_update", "Atualização periódica de status");
+  addToHistory("status_update", "Status periódico enviado");
 }
 
+// ========== CONTROLAR ALARME ==========
 void handleAlarm() {
   if (alarmActive) {
     static unsigned long lastBuzzerChange = 0;
@@ -251,6 +148,7 @@ void handleAlarm() {
   }
 }
 
+// ========== RECONECTAR MQTT ==========
 void reconnect() {
   while (!client.connected()) {
     Serial.print("Tentando MQTT...");
@@ -261,26 +159,41 @@ void reconnect() {
     } else {
       Serial.print("Falha, rc=");
       Serial.print(client.state());
-      Serial.println(" tentando em 5 segundos");
+      Serial.println(" tentando em 5s");
       delay(5000);
     }
   }
 }
 
+// ========== SETUP PRINCIPAL ==========
+void setup() {
+  Serial.begin(115200);
+  
+  pinMode(buzzerPin, OUTPUT);
+  digitalWrite(buzzerPin, LOW);
+  
+  setup_wifi();
+  client.setServer(mqtt_broker, 1883);
+  client.setCallback(mqtt_callback);
+  
+  // Histórico inicial
+  addToHistory("system_start", "Sistema beacon inicializado");
+  
+  Serial.println("🚀 Beacon Mottu - Sistema de Persistência JSON");
+}
+
+// ========== LOOP PRINCIPAL ==========
 void loop() {
   if (!client.connected()) {
     reconnect();
   }
   client.loop();
   
-  // Enviar status periodicamente
   if (millis() - lastStatusUpdate > statusInterval) {
     sendBeaconStatus();
     lastStatusUpdate = millis();
   }
   
-  // Gerenciar alarme
   handleAlarm();
-  
   delay(100);
 }
