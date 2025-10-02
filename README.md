@@ -10,9 +10,9 @@ O Pulse é um sistema inteligente de rastreamento e localização desenvolvido p
 Implementar uma solução completa de rastreamento que permita localizar e monitorar ativos (como motos compartilhadas) através de beacons com buzzer, proporcionando controle remoto e persistência de dados históricos.
 
 👥 Grupo Desenvolvedor
-    Gabriela de Sousa Reis - RM558830
-    Laura Amadeu Soares - RM556690
-    Raphael Lamaison Kim - RM557914
+    Gabriela de Sousa Reis - RM558830 
+     Laura Amadeu Soares - RM556690
+     Raphael Lamaison Kim - RM557914
 
 🚀 Funcionalidades Principais
 📍 Localização por Beacon: Sistema de beacon com ESP32 e buzzer para localização auditiva
